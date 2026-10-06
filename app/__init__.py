@@ -29,6 +29,9 @@ _CREATE_ALL_LOCK_ID = 7401
 
 # Content-Security-Policy: the browser only runs scripts from this site and
 # the pinned Chart.js CDN URL, and the page cannot be framed (clickjacking).
+# With DevTools open, the browser console shows the Chart.js source map
+# (chart.umd.min.js.map) being blocked. That is expected and harmless: only
+# DevTools asks for it, and allowing it would loosen the policy for no gain.
 _CSP = (
     "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; "
     "style-src 'self'; img-src 'self' data:; object-src 'none'; "
