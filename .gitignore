@@ -1,0 +1,31 @@
+# Secrets: never commit real env files (the .env.example template is fine)
+.env
+.env.*
+!.env.example
+
+# Terraform state and plugin cache (state can contain secrets)
+*.tfstate*
+.terraform/
+*.tfplan
+
+# Cluster access files and private keys
+kubeconfig*
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Scan and test reports produced by the pipeline
+reports/
+sbom.json
+
+# Editor and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
