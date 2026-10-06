@@ -1,0 +1,15 @@
+# Settings for the dev tools only (this app is not packaged).
+
+[tool.pytest.ini_options]
+# Lets tests `import app` when pytest runs from the repo root.
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+# E/F: errors and pyflakes (defaults), I: sorted imports,
+# B: common bug patterns, UP: modern Python syntax.
+select = ["E", "F", "I", "B", "UP"]
