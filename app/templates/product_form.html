@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}New product{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>New product</h1>
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Name <input name="name" value="{{ form.get('name', '') }}" maxlength="200" required></label>
+    <label>SKU <input name="sku" value="{{ form.get('sku', '') }}" maxlength="64" pattern="[A-Za-z0-9_\-]+" required></label>
+    <label>Price <input name="price" type="number" step="0.01" min="0" value="{{ form.get('price', '') }}" required></label>
+    <label>Stock level <input name="stock_level" type="number" step="1" min="0" value="{{ form.get('stock_level', '0') }}" required></label>
+    <label>Description <textarea name="description" maxlength="2000" rows="3">{{ form.get('description', '') }}</textarea></label>
+    <button type="submit">Create</button>
+  </form>
+</section>
+{% endblock %}

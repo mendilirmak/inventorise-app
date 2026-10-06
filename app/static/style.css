@@ -1,0 +1,27 @@
+/* Minimal styling: readable tables and forms, nothing more. */
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, sans-serif; color: #222; background: #f5f6f8; }
+header { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1.5rem; background: #1f2a37; color: #fff; }
+header a, header .link { color: #fff; text-decoration: none; margin-left: 1rem; }
+.brand { font-weight: bold; margin-left: 0; }
+.who { margin-left: 1rem; opacity: 0.7; }
+main { max-width: 1000px; margin: 1.5rem auto; padding: 0 1rem; }
+.card { background: #fff; border-radius: 6px; padding: 1rem 1.25rem; margin-bottom: 1rem; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
+.narrow { max-width: 480px; }
+.columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; }
+.summary { color: #555; }
+label { display: block; margin-bottom: 0.75rem; font-size: 0.9rem; }
+input, textarea { display: block; width: 100%; padding: 0.4rem; margin-top: 0.2rem; border: 1px solid #ccc; border-radius: 4px; font: inherit; }
+button { padding: 0.45rem 1rem; border: 0; border-radius: 4px; background: #3b7dd8; color: #fff; cursor: pointer; font: inherit; }
+button.danger { background: #d9534f; }
+button.link { background: none; padding: 0; }
+form.inline { display: inline; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 0.5rem; border-bottom: 1px solid #eee; text-align: left; }
+.num { text-align: right; }
+tr.low { background: #fdecea; }
+.badge { background: #d9534f; color: #fff; border-radius: 3px; padding: 0 0.35rem; font-size: 0.75rem; }
+.flash { padding: 0.6rem 1rem; border-radius: 4px; background: #e7f1fb; }
+.flash.error { background: #fdecea; }
+.hint { font-size: 0.85rem; color: #666; }
+.history { padding-left: 1.2rem; font-size: 0.9rem; }

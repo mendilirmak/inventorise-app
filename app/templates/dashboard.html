@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<h1>Stock overview</h1>
+<p class="summary">
+  {{ analytics.products|length }} products ·
+  {{ analytics.total_stock }} units in stock ·
+  <strong>{{ analytics.low_stock_count }}</strong> below the low-stock threshold ({{ threshold }})
+</p>
+
+<section class="card">
+  <canvas id="stock-chart" height="110" aria-label="Stock level per product" role="img"></canvas>
+</section>
+
+<section class="card">
+  <table>
+    <thead>
+      <tr><th>Name</th><th>SKU</th><th class="num">Price</th><th class="num">Stock</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for p in products %}
+        <tr class="{{ 'low' if p.stock_level < threshold }}">
+          <td>{{ p.name }}</td>
+          <td><code>{{ p.sku }}</code></td>
+          <td class="num">{{ '%.2f'|format(p.price) }}</td>
+          <td class="num">{{ p.stock_level }}{% if p.stock_level < threshold %} <span class="badge">low</span>{% endif %}</td>
+          <td><a href="{{ url_for('ui.product_page', product_id=p.id) }}">Edit / restock</a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5">No products yet. <a href="{{ url_for('ui.new_product') }}">Add the first one</a>.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+{# Chart data as JSON. type="application/json" is never executed, and tojson
+   escapes <, > and &, so product names cannot break out of this tag. #}
+<script type="application/json" id="chart-data">{{ analytics|tojson }}</script>
+{% endblock %}
+
+{% block scripts %}
+{# Pinned version + integrity hash: the browser refuses the file if the CDN
+   ever serves something different. #}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
+        integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ"
+        crossorigin="anonymous"></script>
+<script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+{% endblock %}
