@@ -207,8 +207,8 @@ def require_api_token():
     if scheme.lower() != "bearer" or not token or len(token) > 128:
         return _unauthorized()
 
-    # Look up by hash. The token is 32 random bytes, so guessing a hash
-    # through timing differences is not practical.
+    # Look up by hash, so the database never holds a usable token. The token has
+    # 32 random bytes, so guessing it is not practical.
     user = db.session.scalar(select(User).where(User.api_token_hash == _hash_token(token)))
     if user is None or as_utc(user.token_expires_at) <= datetime.now(UTC):
         return _unauthorized()

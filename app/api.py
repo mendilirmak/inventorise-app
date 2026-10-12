@@ -34,10 +34,10 @@ def list_products():
     return jsonify([p.to_dict() for p in services.list_products()])
 
 
-# Route order matters: /low-stock and /analytics are registered BEFORE
-# /<int:product_id>. The `int:` converter also means "low-stock" can never
-# be mistaken for a product id - without it, /products/low-stock would be
-# sent to get_product("low-stock") and return 404.
+# Route order matters. /low-stock and /analytics must be registered BEFORE
+# /<int:product_id>. The `int:` converter also stops "low-stock" from matching
+# as a product id. Without it, /products/low-stock would go to
+# get_product("low-stock") and return 404.
 @bp.get("/products/low-stock")
 def low_stock():
     return jsonify([p.to_dict() for p in services.low_stock_products(_threshold())])

@@ -24,14 +24,14 @@ from .models import Product, db
 log = logging.getLogger(__name__)
 csrf = CSRFProtect()
 
-# Any number works; it just has to be the same in every app pod.
+# Any number works, as long as every app pod uses the same one.
 _CREATE_ALL_LOCK_ID = 7401
 
-# Content-Security-Policy: the browser only runs scripts from this site and
-# the pinned Chart.js CDN URL, and the page cannot be framed (clickjacking).
-# With DevTools open, the browser console shows the Chart.js source map
-# (chart.umd.min.js.map) being blocked. That is expected and harmless: only
-# DevTools asks for it, and allowing it would loosen the policy for no gain.
+# Content-Security-Policy: scripts come only from this site and the pinned
+# Chart.js CDN, and the page cannot be framed (clickjacking protection).
+# With DevTools open, the console may report the blocked Chart.js source map
+# (chart.umd.min.js.map). That is expected: only DevTools requests it, and
+# allowing it would weaken the policy for no benefit.
 _CSP = (
     "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; "
     "style-src 'self'; img-src 'self' data:; object-src 'none'; "
@@ -82,8 +82,8 @@ def _setup_metrics(app):
     # A registry per app instance, so tests can build many apps without
     # "metric already registered" errors.
     registry = CollectorRegistry()
-    # group_by="endpoint" labels requests by route name, not by raw path, so
-    # /api/products/1, /2, /3 ... do not each create a new time series.
+    # Label requests by route name, not by raw path. Otherwise /api/products/1,
+    # /2, /3 ... would each create a new time series.
     PrometheusMetrics(app, registry=registry, group_by="endpoint")
 
     gauge = Gauge(
