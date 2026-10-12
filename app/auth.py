@@ -7,7 +7,8 @@
   tokens. Every other /api/* request must send `Authorization: Bearer <token>`.
 
 Users are created only from the command line (cli.py). There is no
-registration page, no lockout and no rate limiting (see SECURITY.md).
+registration page, no lockout and no rate limiting (see docs/SECURITY.md in
+the devops repo).
 """
 
 import hashlib
@@ -38,8 +39,8 @@ TOKEN_LIFETIME = timedelta(hours=24)
 USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9_.-]{3,64}$")
 MIN_PASSWORD_LENGTH = 12
 MAX_PASSWORD_LENGTH = 256
-# Checked when the username does not exist, so a wrong username takes as
-# long as a wrong password and an attacker cannot tell which one was wrong.
+# Checked for unknown usernames, so a wrong username takes as long as a wrong
+# password. An attacker cannot tell them apart by timing.
 _DUMMY_HASH = generate_password_hash("not-a-real-password")
 
 login_manager = LoginManager()
@@ -207,8 +208,7 @@ def require_api_token():
     if scheme.lower() != "bearer" or not token or len(token) > 128:
         return _unauthorized()
 
-    # Look up by hash, so the database never holds a usable token. The token has
-    # 32 random bytes, so guessing it is not practical.
+    # Look up by hash. The database never holds a usable token.
     user = db.session.scalar(select(User).where(User.api_token_hash == _hash_token(token)))
     if user is None or as_utc(user.token_expires_at) <= datetime.now(UTC):
         return _unauthorized()

@@ -3,7 +3,7 @@
 .env.*
 !.env.example
 
-# Terraform state and plugin cache (state can contain secrets)
+# Infrastructure files. They belong in the devops repo, but are blocked here too
 *.tfstate*
 .terraform/
 *.tfplan

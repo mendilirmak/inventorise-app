@@ -10,6 +10,6 @@ target-version = "py312"
 line-length = 100
 
 [tool.ruff.lint]
-# E/F: errors and pyflakes (defaults), I: sorted imports,
-# B: common bug patterns, UP: modern Python syntax.
+# E: style errors, F: pyflakes (unused names and similar), I: import order,
+# B: likely bugs, UP: modern Python syntax.
 select = ["E", "F", "I", "B", "UP"]

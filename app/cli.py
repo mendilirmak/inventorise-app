@@ -1,8 +1,7 @@
 """`flask create-user <username>`: the only way to create or update a user.
 
-Prompts for the password (typed twice, hidden). Scripts can pass
-`--password`, but note it is then visible in the process list and shell
-history; piping it on stdin is safer (see README).
+It asks for the password twice, hidden. Avoid `--password`: the password then
+shows in the process list and the shell history.
 """
 
 import click

@@ -10,8 +10,8 @@ import pytest
 
 TEST_ENV = {
     "DATABASE_URL": "sqlite://",  # in-memory database
-    # Obviously fake, just long enough to pass the length check (and it
-    # does not look like a real secret to the gitleaks scan).
+    # Obviously fake. Long enough for the length check, and not shaped like a
+    # real secret, so gitleaks ignores it.
     "SECRET_KEY": "x" * 40,
     "APP_ENV": "dev",
     "LOG_LEVEL": "WARNING",

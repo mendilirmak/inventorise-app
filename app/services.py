@@ -1,7 +1,7 @@
-"""Business logic. Used by BOTH the JSON API (api.py) and the HTML UI (ui.py),
-so every rule (validation, duplicate SKU, restock) lives in one place.
+"""Business rules, used by both the JSON API (api.py) and the HTML UI (ui.py).
+Each rule lives in one place.
 
-Functions raise a ServiceError subclass on bad input; the caller turns it
+On bad input the functions raise a ServiceError subclass. The caller turns it
 into a JSON error or a flash message.
 """
 
@@ -180,7 +180,7 @@ def update_product(product_id, data):
 
 def delete_product(product_id):
     product = get_product(product_id)
-    db.session.delete(product)  # its restock logs go with it (cascade)
+    db.session.delete(product)  # its restock logs are deleted too (cascade)
     db.session.commit()
 
 

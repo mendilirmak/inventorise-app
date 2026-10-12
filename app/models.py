@@ -1,8 +1,7 @@
 """Database tables: Product, RestockLog, User.
 
-Tables are created with `db.create_all()` at startup (see __init__.py).
-That is fine for this project; a real product would use migrations
-(Alembic) so the schema can change without dropping data.
+Tables are created at startup with `db.create_all()` (see __init__.py). A real
+product would use migrations (Alembic) so the schema can change safely.
 """
 
 from datetime import UTC, datetime

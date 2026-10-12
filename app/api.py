@@ -1,7 +1,7 @@
 """JSON API under /api. Every route needs a bearer token (see auth.py).
 
-The routes only parse the request and shape the response; the rules live in
-services.py, shared with the HTML UI.
+The routes parse the request and shape the response. The rules live in
+services.py.
 """
 
 from flask import Blueprint, current_app, jsonify, request
@@ -34,10 +34,10 @@ def list_products():
     return jsonify([p.to_dict() for p in services.list_products()])
 
 
-# Route order matters. /low-stock and /analytics must be registered BEFORE
-# /<int:product_id>. The `int:` converter also stops "low-stock" from matching
-# as a product id. Without it, /products/low-stock would go to
-# get_product("low-stock") and return 404.
+# The `int:` converter stops /products/<int:product_id> from matching "low-stock"
+# or "analytics", so those two routes work whatever the order. Without the
+# converter, /products/low-stock would go to get_product("low-stock") and
+# return 404. The two routes come first here to keep the intent clear.
 @bp.get("/products/low-stock")
 def low_stock():
     return jsonify([p.to_dict() for p in services.low_stock_products(_threshold())])

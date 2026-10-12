@@ -1,6 +1,6 @@
-# Two stages: "build" installs the Python packages into a virtual env,
-# the final stage copies only that venv and the app code. Build tools and
-# pip caches never reach the image that runs in production.
+# Two stages. "build" installs the Python packages into a virtual environment.
+# The final image copies only that environment and the app code, so build
+# tools and pip caches never reach it.
 
 # Exact tag (Python 3.12.15 on Debian trixie) so every build uses the same base.
 FROM python:3.12.15-slim-trixie AS build
@@ -15,9 +15,9 @@ RUN /opt/venv/bin/pip install -r requirements.txt
 
 FROM python:3.12.15-slim-trixie
 
-# PYTHONDONTWRITEBYTECODE: no .pyc files (the root filesystem is read-only
-# in Kubernetes). PYTHONUNBUFFERED: logs appear immediately.
-# FLASK_APP: lets `flask create-user` find the app.
+# PYTHONDONTWRITEBYTECODE: no .pyc files (the root filesystem is read-only in
+# Kubernetes). PYTHONUNBUFFERED: logs appear at once. FLASK_APP: lets
+# `flask create-user` find the app.
 ENV PATH="/opt/venv/bin:$PATH" \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -37,12 +37,11 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
     CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/live', timeout=2)"]
 
-# One worker process with 4 threads per container: Kubernetes adds more
-# containers (HPA) when more capacity is needed. --worker-tmp-dir uses
-# memory instead of disk, so a read-only root filesystem works.
-# --access-logfile is off because the app writes its own JSON request log.
-# --no-control-socket: gunicorn's admin socket is not used, and it would try
-# to write into $HOME on the read-only filesystem.
+# One worker process with 4 threads per container. Kubernetes adds containers
+# when load grows (HPA). --worker-tmp-dir keeps gunicorn's temp files in
+# memory, so the read-only root filesystem works. --access-logfile is off
+# because the app writes its own JSON log. --no-control-socket: gunicorn's
+# admin socket is unused, and it would write into $HOME, which is read-only.
 ENTRYPOINT ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "1", "--threads", "4", \
             "--worker-tmp-dir", "/dev/shm", "--access-logfile", "/dev/null", \
             "--no-control-socket"]

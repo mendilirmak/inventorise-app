@@ -1,8 +1,8 @@
-"""HTML pages (Jinja templates). Every page needs a logged-in session.
+"""HTML pages (Jinja templates). Every page needs a login.
 
-Forms POST here; these routes convert the form strings to numbers and call
-the same services.py functions as the JSON API. CSRF tokens are checked on
-every POST by Flask-WTF's CSRFProtect (set up in __init__.py).
+Forms POST here. The routes turn the form text into numbers and call the same
+services.py functions as the JSON API. Flask-WTF checks the CSRF token on
+every POST (set up in __init__.py).
 """
 
 from decimal import Decimal, InvalidOperation
@@ -22,8 +22,8 @@ def require_login():
 
 
 def _product_form_data():
-    """Read the product form. Values that do not parse are passed on
-    unchanged, so services.py rejects them with a clear message."""
+    """Read the product form. Values that do not parse stay as text, so
+    services.py rejects them with a clear message."""
     data = {field: request.form.get(field, "") for field in services.PRODUCT_FIELDS}
     try:
         data["stock_level"] = int(data["stock_level"])

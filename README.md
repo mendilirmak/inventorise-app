@@ -1,27 +1,29 @@
 # Inventorise — app
 
-A small inventory system for a retail chain: a Flask app that serves both a
-JSON API (`/api/...`) and a simple HTML UI, backed by PostgreSQL.
-Deployment, pipeline and infrastructure live in the separate
+A small inventory system for a retail shop. One Flask app serves a JSON API
+(`/api/...`) and a simple HTML UI. The data lives in PostgreSQL.
+
+The deployment and pipeline are in the separate
 [inventorise-devops](https://github.com/mendilirmak/inventorise-devops) repo.
 
-## What is in here
+## Layout
 
-| Path | What it is |
+| Path | What it does |
 |---|---|
-| `app/config.py` | Reads settings from environment variables; refuses to start if one is invalid |
+| `app/__init__.py` | Builds the app: logging, security headers, health and metrics routes |
+| `app/config.py` | Reads settings from environment variables. Refuses to start if one is wrong |
 | `app/models.py` | Database tables: `products`, `restock_logs`, `users` |
-| `app/services.py` | Business rules (validation, restock, analytics), used by both API and UI |
-| `app/auth.py` | Browser login (session cookie) and API login (bearer token) |
+| `app/services.py` | Business rules (validation, restock, analytics). Used by the API and the UI |
+| `app/auth.py` | Login: browser session and API token |
 | `app/api.py` | JSON routes under `/api` |
-| `app/ui.py` + `templates/` | HTML pages |
-| `app/cli.py` | `flask create-user` command |
-| `tests/` | Unit tests (SQLite in memory, no Postgres needed) |
-| `tests/smoke/` | Test run against a deployed app by the pipeline |
+| `app/ui.py`, `templates/`, `static/` | HTML pages, styles and the dashboard chart |
+| `app/cli.py` | The `flask create-user` command |
+| `tests/` | Unit tests. They use in-memory SQLite, so no PostgreSQL is needed |
+| `tests/smoke/` | Smoke test, run by the pipeline against the deployed app |
 
 ## Configuration
 
-Environment variables only (see `.env.example`):
+Environment variables only. `.env.example` lists them all.
 
 | Variable | Meaning |
 |---|---|
@@ -31,38 +33,38 @@ Environment variables only (see `.env.example`):
 | `LOW_STOCK_THRESHOLD` | Products with stock **below** this are "low stock" (default 10) |
 | `LOG_LEVEL` | `DEBUG`, `INFO`, `WARNING` or `ERROR` |
 
-## Run it locally (Docker Compose)
+## Run locally with Docker Compose
 
-Run these inside WSL2 (Ubuntu), not PowerShell.
+Run these in WSL2 (Ubuntu), not PowerShell.
 
 ```bash
 cp .env.example .env
-# Edit .env: set SECRET_KEY and POSTGRES_PASSWORD. To generate a key:
+# Edit .env and set SECRET_KEY and POSTGRES_PASSWORD. To make a key:
 python3 -c "import secrets; print(secrets.token_urlsafe(48))"
 
 docker compose up --build -d
-docker compose exec app flask create-user admin    # asks for a password (min 12 chars)
+docker compose exec app flask create-user admin    # asks for a password (12+ characters)
 ```
 
 Open http://localhost:8000 and log in.
 
-**Check it works:**
+Check that it works:
 
 ```bash
-curl -s localhost:8000/health/ready            # {"status":"ok"} = app + database OK
-docker compose logs app | tail                 # one JSON line per request
+curl -s localhost:8000/health/ready     # {"status":"ok"}: the app and the database are up
+docker compose logs app | tail          # one JSON line per request
 ```
 
-Users are only ever created this way — there is no registration page.
-Running `create-user` again for an existing user changes the password and
-cancels that user's API token.
+There is no sign-up page. Users are created only with `flask create-user`.
+Running it again for an existing user sets a new password and cancels that
+user's API token.
 
-Stop with `docker compose down` (data is kept in the `pgdata` volume;
-`docker compose down -v` deletes it).
+Stop with `docker compose down`. The data stays in the `pgdata` volume.
+`docker compose down -v` deletes the data too.
 
-## Using the API
+## Use the API
 
-Every `/api/*` call needs a token. Get one (valid 24 hours):
+Every `/api/*` call needs a token. A token is valid for 24 hours.
 
 ```bash
 TOKEN=$(curl -s -X POST localhost:8000/api/auth/login \
@@ -81,18 +83,18 @@ curl -s localhost:8000/api/products -H "Authorization: Bearer $TOKEN"
 | POST | `/api/products` | `name`, `sku`, `price`, `stock_level`, optional `description` |
 | PUT | `/api/products/<id>` | any of the fields above |
 | DELETE | `/api/products/<id>` | |
-| POST | `/api/products/<id>/restock` | `quantity` (> 0), optional `note` |
+| POST | `/api/products/<id>/restock` | `quantity` (more than 0), optional `note` |
 | GET | `/api/restocks` | newest first, last 1000 |
 
-Errors are JSON `{"error": "..."}` with 400 (bad input), 401 (no/expired
-token), 404 (not found) or 409 (SKU already used). Unknown fields are
-rejected with 400.
+Errors return JSON `{"error": "..."}`: 400 for bad input, 401 for a missing or
+expired token, 404 if not found, 409 if the SKU is already used. Unknown
+fields are rejected with 400.
 
-Open endpoints (no login): `/health/live`, `/health/ready`, `/metrics`.
+Open without a login: `/health/live`, `/health/ready` and `/metrics`.
 
 ## Tests and lint
 
-With Python 3.12 and a virtual environment:
+With Python 3.12 in a virtual environment:
 
 ```bash
 python3 -m venv .venv && . .venv/bin/activate
@@ -101,11 +103,10 @@ ruff check .
 pytest
 ```
 
-Or without installing anything locally, in the same base image the app uses:
+Or without installing anything, in the same base image the app uses:
 
 ```bash
-# The flags stop the container (which runs as root) from leaving
-# root-owned cache files in your folder.
+# The flags keep root-owned cache files out of your folder.
 docker run --rm -v "$PWD":/src -w /src -e PYTHONDONTWRITEBYTECODE=1 python:3.12.15-slim-trixie \
   sh -c "pip install -q -r requirements-dev.txt && ruff check --no-cache . && pytest -p no:cacheprovider"
 ```
@@ -116,26 +117,25 @@ The smoke test runs only when `BASE_URL` is set:
 BASE_URL=http://localhost:8000 SMOKE_USER=admin SMOKE_PASSWORD=... pytest tests/smoke
 ```
 
-It creates a product with 3 units and expects it in the low-stock list, so
+It adds a product with 3 units and expects it in the low-stock list. So
 `LOW_STOCK_THRESHOLD` must be above 3 on the target.
 
 ## Design notes
 
-- **Tables are created with `db.create_all()` at startup.** Fine for this
-  project; a real product would use migrations (Alembic) so the schema can
-  change without losing data. On Postgres a database lock stops two pods
-  from creating tables at the same moment.
-- **Passwords** are hashed with scrypt (`werkzeug.security`). **API tokens**
-  are stored only as SHA-256 hashes, so a database leak does not leak
-  usable tokens. One active token per user; logging in again replaces it.
-- **The API accepts only bearer tokens, not the browser cookie.** That makes
-  cross-site request forgery (CSRF: another site making your browser send
-  requests) impossible against the API. HTML forms are protected with
-  CSRF tokens instead. Because of this the dashboard chart gets its data
-  embedded in the page, from the same function `/api/products/analytics`
-  uses.
-- **gunicorn runs 1 worker with 4 threads per container.** Kubernetes adds
-  containers when load grows, and Prometheus metrics stay simple (no
-  multi-process mode).
-- **Known gaps** (no login rate limiting or lockout, etc.) are listed in
+- **Tables** are created at startup with `db.create_all()`. That is enough for
+  this project. A real product would use migrations (Alembic), so the schema
+  can change without losing data. On Postgres, a lock makes the pods take
+  turns, so two pods never create the tables at the same moment.
+- **Passwords** are hashed with scrypt. **API tokens** are stored only as
+  SHA-256 hashes, so a leaked database gives no usable tokens. Each user has
+  one token, and a new login replaces it.
+- **The API accepts only bearer tokens, not the browser cookie.** A malicious
+  site cannot make your browser call the API (this attack is called CSRF,
+  cross-site request forgery). The HTML forms use CSRF tokens instead. The
+  dashboard chart gets its data in the page, from the same function that the
+  analytics API uses.
+- **gunicorn runs one worker with 4 threads per container.** Kubernetes adds
+  containers under load. One process per container keeps the Prometheus
+  metrics simple.
+- **Known gaps** (no login rate limit or lockout, and others) are listed in
   `docs/SECURITY.md` in the devops repo.

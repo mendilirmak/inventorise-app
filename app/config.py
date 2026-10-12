@@ -1,7 +1,7 @@
 """App settings, read from environment variables only.
 
-Every value is checked at startup. If something is missing or wrong the app
-refuses to start (fail closed) instead of running with a weak default.
+Every value is checked at startup. If one is missing or wrong, the app refuses
+to start (fail closed) instead of running with a weak default.
 """
 
 import os
@@ -48,7 +48,7 @@ def load_config(environ=None):
 
     return {
         "SQLALCHEMY_DATABASE_URI": database_url,
-        # Check the connection before using it, so a Postgres restart does not
+        # Test each connection before use. A Postgres restart then does not
         # leave the app holding dead connections.
         "SQLALCHEMY_ENGINE_OPTIONS": {"pool_pre_ping": True},
         "SECRET_KEY": secret_key,

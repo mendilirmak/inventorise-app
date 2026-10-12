@@ -24,14 +24,13 @@ from .models import Product, db
 log = logging.getLogger(__name__)
 csrf = CSRFProtect()
 
-# Any number works, as long as every app pod uses the same one.
+# Any number works, as long as every pod uses the same one.
 _CREATE_ALL_LOCK_ID = 7401
 
-# Content-Security-Policy: scripts come only from this site and the pinned
-# Chart.js CDN, and the page cannot be framed (clickjacking protection).
-# With DevTools open, the console may report the blocked Chart.js source map
-# (chart.umd.min.js.map). That is expected: only DevTools requests it, and
-# allowing it would weaken the policy for no benefit.
+# Content-Security-Policy: scripts only from this site and the pinned Chart.js
+# CDN. No framing, which blocks clickjacking (a hidden page placed in an
+# iframe). DevTools may report the blocked Chart.js source map. That is
+# expected, and allowing it would weaken the policy.
 _CSP = (
     "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; "
     "style-src 'self'; img-src 'self' data:; object-src 'none'; "
@@ -64,10 +63,10 @@ def _setup_logging(level):
 
 
 def _create_tables(app):
-    """db.create_all(), safe when several pods start at the same time.
+    """Create the tables, safely when several pods start at once.
 
-    On Postgres an advisory lock (a named lock held by the database) makes
-    the pods take turns, so two of them never create the same table at once.
+    On Postgres an advisory lock (a named lock in the database) makes the
+    pods take turns.
     """
     with app.app_context():
         if db.engine.dialect.name == "postgresql":
@@ -79,11 +78,11 @@ def _create_tables(app):
 
 
 def _setup_metrics(app):
-    # A registry per app instance, so tests can build many apps without
+    # One registry per app, so tests can create many apps without
     # "metric already registered" errors.
     registry = CollectorRegistry()
-    # Label requests by route name, not by raw path. Otherwise /api/products/1,
-    # /2, /3 ... would each create a new time series.
+    # Label requests by route name, not raw path. Otherwise /api/products/1,
+    # /2, /3 would each make a new time series.
     PrometheusMetrics(app, registry=registry, group_by="endpoint")
 
     gauge = Gauge(
@@ -93,8 +92,8 @@ def _setup_metrics(app):
     )
 
     def count_low_stock():
-        # Runs inside the /metrics request. If the database is down, report
-        # NaN (and log it) rather than failing the whole scrape.
+        # Runs during each /metrics request. If the database is down, return
+        # NaN and log it, instead of failing the whole scrape.
         try:
             threshold = app.config["LOW_STOCK_THRESHOLD"]
             query = select(func.count()).where(Product.stock_level < threshold)
@@ -132,8 +131,7 @@ def _register_request_logging(app):
     def log_request(response):
         started = g.get("start_time", time.perf_counter())
         duration_ms = round((time.perf_counter() - started) * 1000, 1)
-        # Probes and Prometheus hit these every few seconds; keep them out
-        # of the normal log unless LOG_LEVEL=DEBUG.
+        # Probes and Prometheus call these every few seconds. Log them only at DEBUG.
         noisy = request.path.startswith("/health/") or request.path == "/metrics"
         log.log(
             logging.DEBUG if noisy else logging.INFO,
@@ -169,7 +167,7 @@ def _register_error_handlers(app):
 
     @app.errorhandler(services.ServiceError)
     def service_error(exc):
-        # Reached only from UI routes that do not catch the error themselves.
+        # Only UI routes that do not catch the error themselves reach this.
         return render_template("error.html", code=exc.status, message=str(exc)), exc.status
 
     @app.errorhandler(Exception)
@@ -200,8 +198,8 @@ def create_app(environ=None, overrides=None):
     app.register_blueprint(auth.bp)
     app.register_blueprint(ui.bp)
     app.register_blueprint(api.bp)
-    # The API uses bearer tokens, not cookies, so it cannot be attacked
-    # with cross-site requests and does not need CSRF tokens.
+    # The API uses bearer tokens, not cookies, so a cross-site request cannot
+    # use it. It needs no CSRF token.
     csrf.exempt(api.bp)
     csrf.exempt(auth.api_login)
 
