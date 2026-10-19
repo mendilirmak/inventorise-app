@@ -3,3 +3,5 @@
 # Shell scripts must keep LF line endings, even when edited on Windows,
 # or they fail inside Linux containers with "bad interpreter".
 *.sh text eol=lf
+# Font files are binary. Never rewrite line endings in them.
+*.woff2 binary
