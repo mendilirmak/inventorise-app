@@ -27,9 +27,7 @@ def load_config(environ=None):
     if len(secret_key) < MIN_SECRET_KEY_LENGTH:
         # Short keys make session cookies easy to forge. Generate one with:
         # python -c "import secrets; print(secrets.token_urlsafe(48))"
-        raise ConfigError(
-            f"SECRET_KEY must be at least {MIN_SECRET_KEY_LENGTH} characters"
-        )
+        raise ConfigError(f"SECRET_KEY must be at least {MIN_SECRET_KEY_LENGTH} characters")
 
     app_env = env.get("APP_ENV", "dev")
     if app_env not in VALID_ENVS:

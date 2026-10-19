@@ -74,9 +74,7 @@ def set_user_password(username, password):
     if not USERNAME_PATTERN.match(username):
         raise UserError("username must be 3-64 characters: letters, digits, '_', '.', '-'")
     if not MIN_PASSWORD_LENGTH <= len(password) <= MAX_PASSWORD_LENGTH:
-        raise UserError(
-            f"password must be {MIN_PASSWORD_LENGTH}-{MAX_PASSWORD_LENGTH} characters"
-        )
+        raise UserError(f"password must be {MIN_PASSWORD_LENGTH}-{MAX_PASSWORD_LENGTH} characters")
 
     user = db.session.scalar(select(User).where(User.username == username))
     created = user is None
@@ -90,8 +88,12 @@ def set_user_password(username, password):
     log.info(
         "user %s",
         "created" if created else "password changed",
-        extra={"fields": {"event": "user_created" if created else "password_changed",
-                          "username": username}},
+        extra={
+            "fields": {
+                "event": "user_created" if created else "password_changed",
+                "username": username,
+            }
+        },
     )
     return created
 
