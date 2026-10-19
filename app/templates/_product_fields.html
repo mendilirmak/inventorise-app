@@ -1,0 +1,23 @@
+{# The five product fields, shared by the new-product and edit forms.
+   Needs: form (values), error_field and error_message (set when a field was rejected). #}
+{% from "_macros.html" import field with context %}
+
+{% call(id, invalid) field("name", "Name", error_field, error_message) %}
+  <input id="{{ id }}" name="name" value="{{ form.get('name', '') }}" maxlength="200" required{% if invalid %} aria-invalid="true" aria-describedby="e-name"{% endif %}>
+{% endcall %}
+
+{% call(id, invalid) field("sku", "SKU", error_field, error_message) %}
+  <input id="{{ id }}" name="sku" value="{{ form.get('sku', '') }}" maxlength="64" pattern="[A-Za-z0-9_\-]+" title="Letters, digits, - and _" required{% if invalid %} aria-invalid="true" aria-describedby="e-sku"{% endif %}>
+{% endcall %}
+
+{% call(id, invalid) field("price", "Price", error_field, error_message) %}
+  <input id="{{ id }}" name="price" type="number" step="0.01" min="0" inputmode="decimal" value="{{ form.get('price', '') }}" required{% if invalid %} aria-invalid="true" aria-describedby="e-price"{% endif %}>
+{% endcall %}
+
+{% call(id, invalid) field("stock_level", "Units in stock", error_field, error_message) %}
+  <input id="{{ id }}" name="stock_level" type="number" step="1" min="0" inputmode="numeric" value="{{ form.get('stock_level', default_stock) }}" required{% if invalid %} aria-invalid="true" aria-describedby="e-stock_level"{% endif %}>
+{% endcall %}
+
+{% call(id, invalid) field("description", "Description", error_field, error_message) %}
+  <textarea id="{{ id }}" name="description" maxlength="2000" rows="3"{% if invalid %} aria-invalid="true" aria-describedby="e-description"{% endif %}>{{ form.get('description', '') }}</textarea>
+{% endcall %}

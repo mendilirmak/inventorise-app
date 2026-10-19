@@ -16,7 +16,7 @@ The deployment and pipeline are in the separate
 | `app/services.py` | Business rules (validation, restock, analytics). Used by the API and the UI |
 | `app/auth.py` | Login: browser session and API token |
 | `app/api.py` | JSON routes under `/api` |
-| `app/ui.py`, `templates/`, `static/` | HTML pages, styles and the dashboard chart |
+| `app/ui.py`, `templates/`, `static/` | HTML pages, styles, fonts and the dashboard charts |
 | `app/cli.py` | The `flask create-user` command |
 | `tests/` | Unit tests. They use in-memory SQLite, so no PostgreSQL is needed |
 | `tests/smoke/` | Smoke test, run by the pipeline against the deployed app |
@@ -132,8 +132,17 @@ It adds a product with 3 units and expects it in the low-stock list. So
 - **The API accepts only bearer tokens, not the browser cookie.** A malicious
   site cannot make your browser call the API (this attack is called CSRF,
   cross-site request forgery). The HTML forms use CSRF tokens instead. The
-  dashboard chart gets its data in the page, from the same function that the
+  dashboard charts get their data in the page, from the same function that the
   analytics API uses.
+- **The pages load styles, scripts and fonts only from this site**, except the
+  pinned Chart.js file (the Content-Security-Policy allows nothing else). So the
+  templates have no inline `style` or `<script>`, and the IBM Plex fonts are
+  served from `app/static/fonts/` (see the README there for the source and checksums).
+- **The dashboard** lists the products below the low-stock threshold, lowest first,
+  with a form to add stock right there. The form sends the one word `next=dashboard`,
+  never a URL, so it cannot redirect off the site. The product table is searched and
+  sorted in the browser by `static/products-table.js`; without JavaScript it is still
+  complete.
 - **gunicorn runs one worker with 4 threads per container.** Kubernetes adds
   containers under load. One process per container keeps the Prometheus
   metrics simple.

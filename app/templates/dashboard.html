@@ -1,34 +1,124 @@
 {% extends "base.html" %}
-{% block title %}Dashboard{% endblock %}
+{% from "_macros.html" import low_chip %}
+{% block title %}Products{% endblock %}
+
+{# One line of the "Needs restocking" list: the product, how many are left, and a
+   small form that adds stock without leaving the dashboard. #}
+{% macro restock_item(p) %}
+<li>
+  <div class="restock-name">
+    <a href="{{ url_for('ui.product_page', product_id=p.id) }}">{{ p.name }}</a>
+    <span class="sku">{{ p.sku }}</span>
+  </div>
+  <span class="left">{{ p.stock_level }} left</span>
+  <form class="restock-form" method="post" action="{{ url_for('ui.restock_product', product_id=p.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="next" value="dashboard">
+    <label class="sr-only" for="qty-{{ p.id }}">Units to add to {{ p.name }}</label>
+    <input id="qty-{{ p.id }}" name="quantity" type="number" min="1" step="1" inputmode="numeric" placeholder="Units" required>
+    <button type="submit" class="btn">Add stock</button>
+  </form>
+</li>
+{% endmacro %}
+
 {% block content %}
 <h1>Stock overview</h1>
-<p class="summary">
-  {{ analytics.products|length }} products ·
-  {{ analytics.total_stock }} units in stock ·
-  <strong>{{ analytics.low_stock_count }}</strong> below the low-stock threshold ({{ threshold }})
-</p>
+<dl class="stats">
+  <div><dt>Products</dt><dd>{{ analytics.products|length }}</dd></div>
+  <div><dt>Units in stock</dt><dd>{{ '{:,}'.format(analytics.total_stock) }}</dd></div>
+  <div class="low"><dt>Below {{ threshold }} units</dt><dd>{{ analytics.low_stock_count }}</dd></div>
+</dl>
 
-<section class="card">
-  <canvas id="stock-chart" height="110" aria-label="Stock level per product" role="img"></canvas>
+<section class="restock" aria-labelledby="restock-h">
+  <div class="restock-head">
+    <h2 id="restock-h">Needs restocking</h2>
+    <p class="muted">
+      {% if low_products %}{{ low_products|length }} product{{ '' if low_products|length == 1 else 's' }} below {{ threshold }} units, lowest first{% endif %}
+    </p>
+  </div>
+  {% if low_products %}
+    <ul class="restock-items">
+      {% for p in low_products[:5] %}{{ restock_item(p) }}{% endfor %}
+    </ul>
+    {% if low_products|length > 5 %}
+      <details class="more">
+        <summary>Show all {{ low_products|length }}</summary>
+        <ul class="restock-items">
+          {% for p in low_products[5:] %}{{ restock_item(p) }}{% endfor %}
+        </ul>
+      </details>
+    {% endif %}
+  {% else %}
+    <p class="empty">Every product has at least {{ threshold }} units.</p>
+  {% endif %}
 </section>
 
-<section class="card">
-  <table>
+{% if products %}
+<section class="charts" aria-label="Charts">
+  <figure class="chart">
+    <figcaption>
+      <h2>Lowest stock</h2>
+      <p class="sub">The 10 products with the fewest units. Amber is below the threshold.</p>
+    </figcaption>
+    <div class="chart-box"><canvas id="low-chart" role="img" aria-label="Bar chart of the 10 products with the fewest units in stock. The same products are listed in the table below."></canvas></div>
+  </figure>
+  <figure class="chart">
+    <figcaption>
+      <h2>Restocks per day</h2>
+      <p class="sub">Restock entries in the last 30 days.</p>
+    </figcaption>
+    <div class="chart-box"><canvas id="restock-chart" role="img" aria-label="Bar chart of restock entries per day over the last 30 days. The data is in the table under the chart."></canvas></div>
+    <details class="data">
+      <summary>Show the data</summary>
+      <table>
+        <thead><tr><th>Day</th><th class="num">Restocks</th></tr></thead>
+        <tbody>
+          {% for d in analytics.restocks_per_day if d.count %}
+            <tr><td>{{ d.date }}</td><td class="num">{{ d.count }}</td></tr>
+          {% else %}
+            <tr><td colspan="2">No restocks in the last 30 days.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p class="hint">Days without a restock are left out.</p>
+    </details>
+  </figure>
+</section>
+{% endif %}
+
+<section aria-labelledby="all-h">
+  <div class="table-head">
+    <h2 id="all-h">All products</h2>
+    {# Shown by products-table.js. Without JavaScript the table is still complete. #}
+    <div class="table-tools" hidden>
+      <label class="sr-only" for="q">Search products</label>
+      <input id="q" type="search" placeholder="Search name or SKU" autocomplete="off">
+      <label class="check"><input type="checkbox" id="low-only"> Low stock only</label>
+      <p id="count" class="muted" aria-live="polite"></p>
+    </div>
+  </div>
+  <table class="products" id="products">
     <thead>
-      <tr><th>Name</th><th>SKU</th><th class="num">Price</th><th class="num">Stock</th><th></th></tr>
+      <tr>
+        <th data-key="name" aria-sort="ascending">Name</th>
+        <th data-key="sku">SKU</th>
+        <th data-key="price" class="num">Price</th>
+        <th data-key="stock" class="num">Stock</th>
+      </tr>
     </thead>
     <tbody>
       {% for p in products %}
-        <tr class="{{ 'low' if p.stock_level < threshold }}">
-          <td>{{ p.name }}</td>
-          <td><code>{{ p.sku }}</code></td>
-          <td class="num">{{ '%.2f'|format(p.price) }}</td>
-          <td class="num">{{ p.stock_level }}{% if p.stock_level < threshold %} <span class="badge">low</span>{% endif %}</td>
-          <td><a href="{{ url_for('ui.product_page', product_id=p.id) }}">Edit / restock</a></td>
+        {% set low = p.stock_level < threshold %}
+        <tr data-name="{{ p.name|lower }}" data-sku="{{ p.sku|lower }}" data-price="{{ p.price }}" data-stock="{{ p.stock_level }}" data-low="{{ 1 if low else 0 }}">
+          <td data-label="Name"><a href="{{ url_for('ui.product_page', product_id=p.id) }}">{{ p.name }}</a></td>
+          <td data-label="SKU"><span class="sku">{{ p.sku }}</span></td>
+          <td data-label="Price" class="num">{{ '%.2f'|format(p.price) }}</td>
+          <td data-label="Stock" class="num"><span class="stock-cell">{% if low %}{{ low_chip() }}{% endif %}<span>{{ p.stock_level }}</span></span></td>
         </tr>
       {% else %}
-        <tr><td colspan="5">No products yet. <a href="{{ url_for('ui.new_product') }}">Add the first one</a>.</td></tr>
+        <tr><td colspan="4">No products yet. <a href="{{ url_for('ui.new_product') }}">Add the first one</a>.</td></tr>
       {% endfor %}
+      <tr class="no-match" hidden><td class="no-match" colspan="4">No product matches. Clear the search or untick "Low stock only".</td></tr>
     </tbody>
   </table>
 </section>
@@ -45,4 +135,5 @@
         integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ"
         crossorigin="anonymous"></script>
 <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+<script src="{{ url_for('static', filename='products-table.js') }}"></script>
 {% endblock %}

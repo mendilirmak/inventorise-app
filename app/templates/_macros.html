@@ -1,0 +1,16 @@
+{# Small pieces used on several pages. #}
+
+{# The low-stock marker: an icon and the word "Low", so it never relies on color alone. #}
+{% macro low_chip() -%}
+<span class="chip chip-low"><svg class="chip-icon" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true" focusable="false"><path d="M6 1 11.5 11h-11z" fill="currentColor"/></svg>Low</span>
+{%- endmacro %}
+
+{# One form field: label, the input (passed in as the call block), and an error
+   message shown right under it when this is the field that was rejected. #}
+{% macro field(name, label, error_field, error_message) -%}
+<div class="field{{ ' has-error' if error_field == name }}">
+  <label for="f-{{ name }}">{{ label }}</label>
+  {{ caller('f-' ~ name, error_field == name) }}
+  {% if error_field == name %}<p class="field-error" id="e-{{ name }}">{{ error_message }}</p>{% endif %}
+</div>
+{%- endmacro %}

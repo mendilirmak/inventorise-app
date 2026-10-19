@@ -28,6 +28,12 @@ MAX_RESTOCK_HISTORY = 1000
 class ServiceError(Exception):
     status = 400
 
+    def __init__(self, message="", field=None):
+        super().__init__(message)
+        # The form field at fault, if there is one. The HTML pages use it to mark
+        # that field. The API ignores it and sends only the message.
+        self.field = field
+
 
 class ValidationError(ServiceError):
     status = 400
@@ -55,12 +61,12 @@ def _check_fields(data, allowed):
 def _text(data, field, max_len, required=True):
     value = data.get(field, "")
     if not isinstance(value, str):
-        raise ValidationError(f"{field} must be a string")
+        raise ValidationError(f"{field} must be a string", field)
     value = value.strip()
     if required and not value:
-        raise ValidationError(f"{field} is required")
+        raise ValidationError(f"{field} is required", field)
     if len(value) > max_len:
-        raise ValidationError(f"{field} must be at most {max_len} characters")
+        raise ValidationError(f"{field} must be at most {max_len} characters", field)
     return value
 
 
@@ -68,29 +74,29 @@ def _int(data, field, minimum, maximum):
     value = data.get(field)
     # bool is a subclass of int in Python, so reject it explicitly.
     if not isinstance(value, int) or isinstance(value, bool):
-        raise ValidationError(f"{field} must be a whole number")
+        raise ValidationError(f"{field} must be a whole number", field)
     if value < minimum or value > maximum:
-        raise ValidationError(f"{field} must be between {minimum} and {maximum}")
+        raise ValidationError(f"{field} must be between {minimum} and {maximum}", field)
     return value
 
 
 def _price(data):
     value = data.get("price")
     if isinstance(value, bool) or not isinstance(value, int | float | Decimal):
-        raise ValidationError("price must be a number")
+        raise ValidationError("price must be a number", "price")
     try:
         price = Decimal(str(value)).quantize(Decimal("0.01"))
     except InvalidOperation:
-        raise ValidationError("price must be a number") from None
+        raise ValidationError("price must be a number", "price") from None
     if not price.is_finite() or price < 0 or price > MAX_PRICE:
-        raise ValidationError(f"price must be between 0 and {MAX_PRICE}")
+        raise ValidationError(f"price must be between 0 and {MAX_PRICE}", "price")
     return price
 
 
 def _sku(data):
     sku = _text(data, "sku", 64)
     if not SKU_PATTERN.match(sku):
-        raise ValidationError("sku may only contain letters, digits, '-' and '_'")
+        raise ValidationError("sku may only contain letters, digits, '-' and '_'", "sku")
     return sku
 
 
@@ -131,7 +137,7 @@ def _commit_or_conflict():
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
-        raise ConflictError("a product with this sku already exists") from None
+        raise ConflictError("a product with this sku already exists", "sku") from None
 
 
 # --- products ----------------------------------------------------------------
@@ -160,7 +166,7 @@ def low_stock_products(threshold):
 def create_product(data):
     clean = _validate_product(data, partial=False)
     if _sku_taken(clean["sku"]):
-        raise ConflictError("a product with this sku already exists")
+        raise ConflictError("a product with this sku already exists", "sku")
     product = Product(**clean)
     db.session.add(product)
     _commit_or_conflict()
@@ -171,7 +177,7 @@ def update_product(product_id, data):
     product = get_product(product_id)
     clean = _validate_product(data, partial=True)
     if "sku" in clean and _sku_taken(clean["sku"], exclude_id=product.id):
-        raise ConflictError("a product with this sku already exists")
+        raise ConflictError("a product with this sku already exists", "sku")
     for field, value in clean.items():
         setattr(product, field, value)
     _commit_or_conflict()
@@ -188,7 +194,7 @@ def restock_product(product_id, data):
     product = get_product(product_id)
     _check_fields(data, RESTOCK_FIELDS)
     if "quantity" not in data:
-        raise ValidationError("missing field(s): quantity")
+        raise ValidationError("missing field(s): quantity", "quantity")
     quantity = _int(data, "quantity", 1, MAX_RESTOCK)
     note = _text(data, "note", 500, required=False)
 

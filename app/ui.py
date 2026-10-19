@@ -36,12 +36,23 @@ def _product_form_data():
     return data
 
 
+def _form_error(exc):
+    """Template values for a rejected form. A message tied to one field is shown
+    next to that field. Any other message goes to the banner at the top."""
+    message = str(exc)[:1].upper() + str(exc)[1:]  # the API messages start in lower case
+    if exc.field:
+        return {"error_field": exc.field, "error_message": message}
+    flash(message, "error")
+    return {"error_field": None, "error_message": None}
+
+
 @bp.get("/")
 def dashboard():
     threshold = current_app.config["LOW_STOCK_THRESHOLD"]
     return render_template(
         "dashboard.html",
         products=services.list_products(),
+        low_products=services.low_stock_products(threshold),
         threshold=threshold,
         # Same data as GET /api/products/analytics, embedded in the page:
         # the API only accepts bearer tokens, not the browser session.
@@ -57,8 +68,7 @@ def new_product():
         try:
             product = services.create_product(_product_form_data())
         except services.ServiceError as exc:
-            flash(str(exc), "error")
-            return render_template("product_form.html", form=form), exc.status
+            return render_template("product_form.html", form=form, **_form_error(exc)), exc.status
         flash(f"Created {product.name}.", "info")
         return redirect(url_for("ui.product_page", product_id=product.id))
     return render_template("product_form.html", form=form)
@@ -71,7 +81,9 @@ def product_page(product_id):
     except services.NotFoundError:
         flash("Product not found.", "error")
         return redirect(url_for("ui.dashboard"))
-    return render_template("product.html", product=product, form=product.to_dict())
+    form = product.to_dict()
+    form["price"] = f"{product.price:.2f}"  # 549.00, not 549.0
+    return render_template("product.html", product=product, form=form)
 
 
 @bp.post("/products/<int:product_id>")
@@ -82,9 +94,11 @@ def update_product(product_id):
         flash("Product not found.", "error")
         return redirect(url_for("ui.dashboard"))
     except services.ServiceError as exc:
-        flash(str(exc), "error")
         product = services.get_product(product_id)
-        return render_template("product.html", product=product, form=request.form), exc.status
+        return (
+            render_template("product.html", product=product, form=request.form, **_form_error(exc)),
+            exc.status,
+        )
     flash("Saved.", "info")
     return redirect(url_for("ui.product_page", product_id=product_id))
 
@@ -105,6 +119,10 @@ def restock_product(product_id):
         flash(str(exc), "error")
     else:
         flash(f"Added {restock.quantity} units.", "info")
+    # The restock list on the dashboard sends next=dashboard. Only this one fixed
+    # word is accepted, never a URL, so the form cannot redirect off the site.
+    if request.form.get("next") == "dashboard":
+        return redirect(url_for("ui.dashboard"))
     return redirect(url_for("ui.product_page", product_id=product_id))
 
 
