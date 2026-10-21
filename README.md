@@ -21,6 +21,14 @@ The deployment and pipeline are in the separate
 | `tests/` | Unit tests. They use in-memory SQLite, so no PostgreSQL is needed |
 | `tests/smoke/` | Smoke test, run by the pipeline against the deployed app |
 
+## Diagrams
+
+The application's parts are drawn in
+[`docs/diagrams/application.png`](https://github.com/mendilirmak/inventorise-devops/blob/main/docs/diagrams/application.png),
+and the tables in
+[`docs/diagrams/data-model.png`](https://github.com/mendilirmak/inventorise-devops/blob/main/docs/diagrams/data-model.png)
+(both in the devops repo).
+
 ## Configuration
 
 Environment variables only. `.env.example` lists them all.
